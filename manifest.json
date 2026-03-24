@@ -2,7 +2,7 @@
   "id": "mercadolibre",
   "name": "MercadoLibre",
   "version": "1.0.0",
-  "description": "Search products, compare prices, and get details from MercadoLibre across Latin America.",
+  "description": "Complete MercadoLibre integration — search products, manage listings, process orders, answer questions, and track shipments across Latin America. Connect your seller account for full access.",
   "author": {
     "name": "Construct Team"
   },
@@ -10,16 +10,48 @@
   "runtime": "deno",
   "transport": "stdio",
   "permissions": {
-    "network": ["api.mercadolibre.com"]
+    "network": ["api.mercadolibre.com"],
+    "env": ["MELI_ACCESS_TOKEN", "MELI_REFRESH_TOKEN", "MELI_USER_ID"]
   },
-  "categories": ["shopping", "e-commerce"],
-  "tags": ["mercadolibre", "shopping", "latin-america", "price-comparison", "argentina", "brazil", "mexico"],
+  "oauth": {
+    "provider": "mercadolibre",
+    "authorization_url": "https://auth.mercadolibre.com.ar/authorization",
+    "token_url": "https://api.mercadolibre.com/oauth/token",
+    "scopes": [],
+    "pkce": false,
+    "refresh": true,
+    "client_id": "$MELI_CLIENT_ID",
+    "client_secret": "$MELI_CLIENT_SECRET",
+    "token_env_mapping": {
+      "access_token": "MELI_ACCESS_TOKEN",
+      "refresh_token": "MELI_REFRESH_TOKEN",
+      "user_id": "MELI_USER_ID"
+    }
+  },
+  "icon": "icon.png",
+  "categories": ["shopping", "e-commerce", "seller-tools"],
+  "tags": ["mercadolibre", "shopping", "latin-america", "e-commerce", "seller", "orders", "argentina", "brazil", "mexico"],
   "tools": [
     { "name": "search_products", "description": "Search for products on MercadoLibre" },
-    { "name": "get_product", "description": "Get detailed information about a specific product" },
+    { "name": "get_product", "description": "Get detailed product information by item ID" },
     { "name": "get_category", "description": "Browse or list product categories" },
     { "name": "get_seller", "description": "Get seller reputation and details" },
-    { "name": "compare_prices", "description": "Compare prices for a product across multiple listings" },
-    { "name": "list_sites", "description": "List available MercadoLibre country sites" }
+    { "name": "compare_prices", "description": "Compare prices across multiple listings" },
+    { "name": "list_sites", "description": "List available MercadoLibre country sites" },
+    { "name": "get_trends", "description": "Get trending searches for a country" },
+    { "name": "get_product_reviews", "description": "Get buyer reviews and ratings for a product" },
+    { "name": "get_product_description", "description": "Get the full text description of a product listing" },
+    { "name": "get_currency_conversion", "description": "Convert between currencies using MercadoLibre exchange rates" },
+    { "name": "get_my_account", "description": "Get your MercadoLibre account info (requires auth)" },
+    { "name": "list_my_items", "description": "List your active product listings (requires auth)" },
+    { "name": "update_listing", "description": "Update price, stock, or status of a listing (requires auth)" },
+    { "name": "list_orders", "description": "List your recent sales orders (requires auth)" },
+    { "name": "get_order", "description": "Get details of a specific order (requires auth)" },
+    { "name": "list_questions", "description": "List buyer questions on your listings (requires auth)" },
+    { "name": "answer_question", "description": "Answer a buyer's question (requires auth)" },
+    { "name": "get_shipment", "description": "Get shipment tracking details (requires auth)" },
+    { "name": "send_message", "description": "Send a message in an order conversation (requires auth)" },
+    { "name": "get_item_visits", "description": "Get visit/view statistics for your listings (requires auth)" },
+    { "name": "manage_ads", "description": "Manage Product Ads — check status, activate, or pause (requires auth)" }
   ]
 }

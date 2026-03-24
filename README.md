@@ -1,6 +1,6 @@
 # MercadoLibre — Construct App
 
-Search products, compare prices, and get details from [MercadoLibre](https://www.mercadolibre.com) across Latin America.
+Complete [MercadoLibre](https://www.mercadolibre.com) integration for Construct — search products, compare prices, manage listings, process orders, answer buyer questions, and track shipments across Latin America.
 
 ## Installation
 
@@ -15,16 +15,44 @@ cd /opt/apps/user
 git clone https://github.com/anthropics/construct-app-mercadolibre mercadolibre
 ```
 
+## OAuth Setup (Seller Features)
+
+To use seller tools (orders, listings, questions), you need to connect your MercadoLibre account:
+
+1. Create an app on the [MercadoLibre Developer Portal](https://developers.mercadolibre.com.ar/devcenter)
+2. Set the redirect URI to `{your-domain}/api/apps/mercadolibre/oauth/callback`
+3. Add `MELI_CLIENT_ID` and `MELI_CLIENT_SECRET` to your Construct backend environment
+4. Open the MercadoLibre app window in Construct and click **Connect**
+
+Public tools (search, product details, price comparison) work without authentication.
+
 ## Tools
+
+### Public (no auth required)
 
 | Tool | Description |
 |------|-------------|
-| `search_products` | Search for products by keyword with filters for price, condition, and country |
-| `get_product` | Get detailed info about a specific product by ID |
+| `search_products` | Search products by keyword with filters for price, condition, and country |
+| `get_product` | Get detailed info about a specific product by item ID |
 | `get_category` | Browse product categories and subcategories |
-| `get_seller` | Check a seller's reputation, ratings, and transaction history |
+| `get_seller` | Check seller reputation, ratings, and transaction history |
 | `compare_prices` | Compare prices across listings with min/max/median stats |
-| `list_sites` | List all available MercadoLibre country sites |
+| `list_sites` | List available MercadoLibre country sites |
+| `get_trends` | Get trending searches for a country |
+
+### Authenticated (requires OAuth)
+
+| Tool | Description |
+|------|-------------|
+| `get_my_account` | Get your account details, reputation, and seller level |
+| `list_my_items` | List your active product listings |
+| `update_listing` | Update price, stock, or status of a listing |
+| `list_orders` | List your recent sales orders |
+| `get_order` | Get full order details — buyer, items, payment, shipping |
+| `list_questions` | List buyer questions on your listings |
+| `answer_question` | Answer a buyer's question |
+| `get_shipment` | Get shipment tracking details |
+| `send_message` | Send a message in an order conversation |
 
 ## Supported Countries
 
@@ -40,26 +68,44 @@ git clone https://github.com/anthropics/construct-app-mercadolibre mercadolibre
 | MEC | Ecuador |
 | MPA | Panama |
 | MPY | Paraguay |
+| MRD | Dominican Republic |
+| MBO | Bolivia |
+| MNI | Nicaragua |
+| MCR | Costa Rica |
+| MSV | El Salvador |
+| MHN | Honduras |
+| MGT | Guatemala |
 
 ## Usage Examples
 
 Once installed, you can ask your Construct agent things like:
 
+**Public:**
 - "Search for iPhone 15 on MercadoLibre Argentina"
 - "Compare prices for Nintendo Switch in Mexico"
 - "Show me details for product MLA1234567890"
-- "What categories are available on MercadoLibre Brazil?"
+- "What's trending on MercadoLibre Brazil?"
 - "Check the reputation of seller 12345678"
+
+**Seller (after connecting your account):**
+- "Show me my active listings"
+- "List my recent orders"
+- "Are there any unanswered buyer questions?"
+- "Answer question #12345 with: Yes, we have it in stock"
+- "Update the price of MLA9876543210 to 15000"
+- "Track shipment #4567890"
 
 ## Development
 
 This app runs as a Deno subprocess with restricted permissions:
 
 ```bash
+# Public tools only
 deno run --allow-net=api.mercadolibre.com server.ts
-```
 
-No authentication required — uses MercadoLibre's public API endpoints.
+# With OAuth tokens for seller tools
+MELI_ACCESS_TOKEN=xxx MELI_USER_ID=123 deno run --allow-net=api.mercadolibre.com --allow-env=MELI_ACCESS_TOKEN,MELI_REFRESH_TOKEN,MELI_USER_ID server.ts
+```
 
 ## License
 
