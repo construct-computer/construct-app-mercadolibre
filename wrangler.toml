@@ -1,0 +1,4 @@
+# Local development only — production deployment handled by the app registry.
+name = "construct-app-mercadolibre"
+main = "server.ts"
+compatibility_date = "2024-12-01"

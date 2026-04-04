@@ -1,5 +1,5 @@
 /**
- * MercadoLibre — Construct App Store MCP server.
+ * MercadoLibre — Worker-native MCP server for the Construct platform.
  *
  * Public tools: search products, compare prices, get product/seller/category info,
  *               browse trends, list country sites, product reviews & descriptions,
@@ -9,19 +9,17 @@
  *                                              shipments, messaging, visit stats,
  *                                              and Product Ads management.
  *
- * Runs as a Deno subprocess with --allow-net=api.mercadolibre.com.
- * Communicates via JSON-RPC 2.0 over stdin/stdout (MCP protocol).
+ * Runs as a Cloudflare Worker. Auth tokens injected per-request via
+ * x-construct-auth header by the Construct platform.
  */
-
-import * as readline from 'node:readline';
 
 const API_BASE = 'https://api.mercadolibre.com';
 
-// ─── Auth ────────────────────────────────────────────────────────────────────
+// ─── Per-request auth (set from x-construct-auth header) ─────────────────────
 
-const ACCESS_TOKEN = process.env.MELI_ACCESS_TOKEN || '';
-const USER_ID = process.env.MELI_USER_ID || '';
-const isAuthenticated = !!ACCESS_TOKEN;
+let ACCESS_TOKEN = '';
+let USER_ID = '';
+let isAuthenticated = false;
 
 // ─── MercadoLibre Sites ──────────────────────────────────────────────────────
 
@@ -1461,72 +1459,80 @@ async function manageAds(args: Record<string, unknown>): Promise<ToolResult> {
   }
 }
 
-// ─── JSON-RPC handler ────────────────────────────────────────────────────────
+// ─── MCP JSON-RPC Handler ────────────────────────────────────────────────────
 
-async function handleRequest(req: {
-  id?: number;
-  method: string;
-  params?: Record<string, unknown>;
-}): Promise<object | null> {
-  const { id, method, params } = req;
+async function handleMcp(request: Request): Promise<Response> {
+  // Extract per-request auth from Construct platform headers
+  try {
+    const authHeader = request.headers.get('x-construct-auth');
+    if (authHeader) {
+      const auth = JSON.parse(authHeader);
+      ACCESS_TOKEN = auth.access_token || '';
+      USER_ID = auth.user_id || '';
+      isAuthenticated = !!ACCESS_TOKEN;
+    } else {
+      ACCESS_TOKEN = '';
+      USER_ID = '';
+      isAuthenticated = false;
+    }
+  } catch {
+    ACCESS_TOKEN = '';
+    USER_ID = '';
+    isAuthenticated = false;
+  }
 
-  // Notifications (no id) — acknowledge silently
-  if (id == null) return null;
+  const rpc = (await request.json()) as { id?: number; method: string; params?: Record<string, unknown> };
 
-  switch (method) {
+  if (rpc.id == null) return new Response(null, { status: 204 });
+
+  let result: unknown;
+
+  switch (rpc.method) {
     case 'initialize':
-      return {
-        jsonrpc: '2.0',
-        id,
-        result: {
-          protocolVersion: '2024-11-05',
-          capabilities: { tools: {} },
-          serverInfo: { name: 'mercadolibre', version: '2.0.0' },
-        },
+      result = {
+        protocolVersion: '2024-11-05',
+        capabilities: { tools: {} },
+        serverInfo: { name: 'mercadolibre', version: '2.0.0' },
       };
+      break;
 
     case 'tools/list':
-      return {
-        jsonrpc: '2.0',
-        id,
-        result: { tools: TOOLS },
-      };
+      result = { tools: TOOLS };
+      break;
 
     case 'tools/call': {
-      const toolName = (params as { name: string }).name;
-      const toolArgs = (params as { arguments?: Record<string, unknown> }).arguments || {};
-      const result = await handleToolCall(toolName, toolArgs);
-      return { jsonrpc: '2.0', id, result };
+      const params = rpc.params as { name: string; arguments?: Record<string, unknown> };
+      result = await handleToolCall(params.name, params.arguments || {});
+      break;
     }
 
     default:
-      return {
-        jsonrpc: '2.0',
-        id,
-        error: { code: -32601, message: `Method not found: ${method}` },
-      };
+      return Response.json(
+        { jsonrpc: '2.0', id: rpc.id, error: { code: -32601, message: `Method not found: ${rpc.method}` } },
+        { headers: { 'Content-Type': 'application/json' } },
+      );
   }
+
+  return Response.json(
+    { jsonrpc: '2.0', id: rpc.id, result },
+    { headers: { 'Content-Type': 'application/json' } },
+  );
 }
 
-// ─── Main loop: read stdin, write stdout ─────────────────────────────────────
+// ─── Worker Entry Point ─────────────────────────────────────────────────────
 
-const rl = readline.createInterface({ input: process.stdin });
+export default {
+  async fetch(request: Request): Promise<Response> {
+    const url = new URL(request.url);
 
-rl.on('line', async (line: string) => {
-  if (!line.trim()) return;
-  try {
-    const req = JSON.parse(line);
-    const response = await handleRequest(req);
-    if (response) {
-      process.stdout.write(JSON.stringify(response) + '\n');
+    if (url.pathname === '/mcp' && request.method === 'POST') {
+      return handleMcp(request);
     }
-  } catch {
-    process.stdout.write(
-      JSON.stringify({
-        jsonrpc: '2.0',
-        id: null,
-        error: { code: -32700, message: 'Parse error' },
-      }) + '\n',
-    );
-  }
-});
+
+    if (url.pathname === '/health') {
+      return new Response('ok');
+    }
+
+    return new Response('Not found', { status: 404 });
+  },
+};
