@@ -1,34 +1,13 @@
-# MercadoLibre — Construct App
+[![Construct App](https://img.shields.io/badge/Construct-App-6366f1)](https://construct.computer)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
-Complete [MercadoLibre](https://www.mercadolibre.com) integration for Construct — search products, compare prices, manage listings, process orders, answer buyer questions, and track shipments across Latin America.
+# Construct App: MercadoLibre
 
-## Installation
-
-From your Construct computer, ask the agent:
-
-> Install the MercadoLibre app from https://github.com/anthropics/construct-app-mercadolibre
-
-Or install manually:
-
-```bash
-cd /opt/apps/user
-git clone https://github.com/anthropics/construct-app-mercadolibre mercadolibre
-```
-
-## OAuth Setup (Seller Features)
-
-To use seller tools (orders, listings, questions), you need to connect your MercadoLibre account:
-
-1. Create an app on the [MercadoLibre Developer Portal](https://developers.mercadolibre.com.ar/devcenter)
-2. Set the redirect URI to `{your-domain}/api/apps/mercadolibre/oauth/callback`
-3. Add `MELI_CLIENT_ID` and `MELI_CLIENT_SECRET` to your Construct backend environment
-4. Open the MercadoLibre app window in Construct and click **Connect**
-
-Public tools (search, product details, price comparison) work without authentication.
+Complete [MercadoLibre](https://www.mercadolibre.com) integration for Construct. Search products, compare prices, manage listings, process orders, answer buyer questions, and track shipments across 17 Latin American marketplaces.
 
 ## Tools
 
-### Public (no auth required)
+### Public Tools (no auth)
 
 | Tool | Description |
 |------|-------------|
@@ -43,7 +22,7 @@ Public tools (search, product details, price comparison) work without authentica
 | `get_product_description` | Get the full text description of a listing |
 | `get_currency_conversion` | Convert between currencies using MercadoLibre rates |
 
-### Authenticated (requires OAuth)
+### Authenticated Tools (OAuth required)
 
 | Tool | Description |
 |------|-------------|
@@ -51,13 +30,13 @@ Public tools (search, product details, price comparison) work without authentica
 | `list_my_items` | List your active product listings |
 | `update_listing` | Update price, stock, or status of a listing |
 | `list_orders` | List your recent sales orders |
-| `get_order` | Get full order details — buyer, items, payment, shipping |
+| `get_order` | Get full order details -- buyer, items, payment, shipping |
 | `list_questions` | List buyer questions on your listings |
 | `answer_question` | Answer a buyer's question |
 | `get_shipment` | Get shipment tracking details |
 | `send_message` | Send a message in an order conversation |
 | `get_item_visits` | Get visit/view statistics for your listings |
-| `manage_ads` | Manage Product Ads — check status, activate, or pause campaigns |
+| `manage_ads` | Manage Product Ads -- check status, activate, or pause campaigns |
 
 ## Supported Countries
 
@@ -81,35 +60,55 @@ Public tools (search, product details, price comparison) work without authentica
 | MHN | Honduras |
 | MGT | Guatemala |
 
-## Usage Examples
+## Getting Started
 
-Once installed, you can ask your Construct agent things like:
+```bash
+# Fork and clone the repository
+git clone https://github.com/<your-username>/construct-app-mercadolibre.git
+cd construct-app-mercadolibre
 
-**Public:**
-- "Search for iPhone 15 on MercadoLibre Argentina"
-- "Compare prices for Nintendo Switch in Mexico"
-- "Show me details for product MLA1234567890"
-- "What's trending on MercadoLibre Brazil?"
-- "Check the reputation of seller 12345678"
+# Install dependencies
+npm install
 
-**Seller (after connecting your account):**
-- "Show me my active listings"
-- "List my recent orders"
-- "Are there any unanswered buyer questions?"
-- "Answer question #12345 with: Yes, we have it in stock"
-- "Update the price of MLA9876543210 to 15000"
-- "Track shipment #4567890"
+# Start the local dev server
+npm run dev
+```
+
+The Worker listens on `http://localhost:8787/mcp` for JSON-RPC requests and `http://localhost:8787/health` for health checks.
+
+## OAuth Setup
+
+To use the authenticated seller tools, you need to register a MercadoLibre application and configure OAuth credentials.
+
+1. Create an application on the [MercadoLibre Developer Portal](https://developers.mercadolibre.com.ar/devcenter).
+2. Set the redirect URI to `{your-domain}/api/apps/mercadolibre/oauth/callback`.
+3. Add the following environment variables to your Construct backend (or `.dev.vars` for local development):
+   - `MELI_CLIENT_ID` -- your application's Client ID
+   - `MELI_CLIENT_SECRET` -- your application's Client Secret
+4. Open the MercadoLibre app window in Construct and click **Connect** to initiate the OAuth flow.
+
+Public tools (search, product details, price comparison, trends) work without any authentication.
+
+## Project Structure
+
+```
+construct-app-mercadolibre/
+  server.ts          # Main Worker entry point -- all tool handlers and API helpers
+  manifest.json      # App manifest (metadata, OAuth config, network permissions)
+  package.json       # Dependencies and scripts
+  wrangler.toml      # Cloudflare Workers configuration
+  icon.png           # App icon
+  dist/              # Build output (generated)
+```
 
 ## Development
 
-This app runs as a Cloudflare Worker using the ConstructApp SDK pattern.
+### Context-based auth pattern
 
-### Auth pattern
-
-Auth state is **never stored in module-level variables**. Instead, the Construct platform injects OAuth credentials per-request via the `x-construct-auth` header, and the SDK extracts them into a `RequestContext` (`ctx`) object that is passed through the entire call chain:
+Auth state is **never stored in module-level variables**. The Construct platform injects OAuth credentials per-request via the `x-construct-auth` header, and the SDK extracts them into a `RequestContext` (`ctx`) object passed through the entire call chain:
 
 ```typescript
-// apiFetch and authFetch accept ctx as a parameter
+// API helpers accept ctx to carry auth state per-request
 async function apiFetch<T>(path: string, ctx: RequestContext): Promise<T> { ... }
 async function authFetch<T>(path: string, ctx: RequestContext, options?: RequestInit): Promise<T> { ... }
 
@@ -125,24 +124,56 @@ app.tool('my_tool', {
 
 This ensures no state leaks between requests, even if the Cloudflare Worker runtime reuses an isolate.
 
-### Forking for other e-commerce APIs
+### Forking for other APIs
 
-This app is a good starting point for integrating other marketplace APIs (Amazon, eBay, Shopee, etc.):
+This app is a solid starting point for integrating other marketplace APIs (Amazon, eBay, Shopee, etc.):
 
-1. Fork this repo
-2. Replace the `API_BASE` URL and TypeScript interfaces with the target API's endpoints and response shapes
-3. Update `apiFetch`/`authFetch` to match the target API's authentication scheme (Bearer token, API key, etc.)
-4. Rewrite each `app.tool()` registration to call the target API's endpoints — the text formatting patterns (building `lines[]` arrays) work well for any marketplace
-5. Update `manifest.json` with the new app's OAuth URLs and network permissions
+1. Fork this repo.
+2. Replace the `API_BASE` URL and TypeScript interfaces with the target API's endpoints and response shapes.
+3. Update `apiFetch`/`authFetch` to match the target API's authentication scheme (Bearer token, API key, etc.).
+4. Rewrite each `app.tool()` registration to call the target API's endpoints. The text formatting patterns (building `lines[]` arrays) translate well to any marketplace.
+5. Update `manifest.json` with the new app's OAuth URLs and network permissions.
 
-### Local development
+## Testing
+
+You can test public tools locally with curl:
 
 ```bash
-npm install
-npm exec wrangler dev
+# Search for products
+curl -X POST http://localhost:8787/mcp -H 'Content-Type: application/json' -d '{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "method": "tools/call",
+  "params": { "name": "search_products", "arguments": { "query": "iPhone 15", "site_id": "MLA" } }
+}'
+
+# Get trending searches in Brazil
+curl -X POST http://localhost:8787/mcp -H 'Content-Type: application/json' -d '{
+  "jsonrpc": "2.0",
+  "id": 2,
+  "method": "tools/call",
+  "params": { "name": "get_trends", "arguments": { "site_id": "MLB" } }
+}'
+
+# List available country sites
+curl -X POST http://localhost:8787/mcp -H 'Content-Type: application/json' -d '{
+  "jsonrpc": "2.0",
+  "id": 3,
+  "method": "tools/call",
+  "params": { "name": "list_sites", "arguments": {} }
+}'
 ```
 
-The Worker listens on `http://localhost:8787/mcp` for JSON-RPC requests and `http://localhost:8787/health` for health checks.
+## Publishing
+
+To publish this app to the Construct App Store, see the [Publishing Guide](https://registry.construct.computer/publish). In short: ensure your `manifest.json` is complete, build the worker with `npm run build`, and submit via the registry CLI.
+
+## Links
+
+- [MercadoLibre API Docs](https://developers.mercadolibre.com)
+- [App SDK](https://www.npmjs.com/package/@construct-computer/app-sdk)
+- [App Store](https://registry.construct.computer)
+- [Publishing Guide](https://registry.construct.computer/publish)
 
 ## License
 
