@@ -1,10 +1,8 @@
 {
+  "$schema": "https://registry.construct.computer/schemas/manifest.json",
   "name": "MercadoLibre",
   "description": "Search products, manage listings, process orders, answer questions, and track shipments across Latin America.",
-  "author": {
-    "name": "Construct Team",
-    "url": "https://construct.computer"
-  },
+  "author": { "name": "Construct Team", "url": "https://construct.computer" },
   "icon": "icon.png",
   "categories": ["shopping"],
   "tags": ["e-commerce", "marketplace", "seller-tools", "latin-america"],
@@ -13,5 +11,8 @@
       "authorization_url": "https://auth.mercadolibre.com/authorization",
       "token_url": "https://api.mercadolibre.com/oauth/token"
     }
+  },
+  "permissions": {
+    "network": ["api.mercadolibre.com", "auth.mercadolibre.com"]
   }
 }

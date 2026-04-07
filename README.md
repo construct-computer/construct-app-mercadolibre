@@ -39,6 +39,9 @@ Public tools (search, product details, price comparison) work without authentica
 | `compare_prices` | Compare prices across listings with min/max/median stats |
 | `list_sites` | List available MercadoLibre country sites |
 | `get_trends` | Get trending searches for a country |
+| `get_product_reviews` | Get buyer reviews and star ratings for a product |
+| `get_product_description` | Get the full text description of a listing |
+| `get_currency_conversion` | Convert between currencies using MercadoLibre rates |
 
 ### Authenticated (requires OAuth)
 
@@ -53,6 +56,8 @@ Public tools (search, product details, price comparison) work without authentica
 | `answer_question` | Answer a buyer's question |
 | `get_shipment` | Get shipment tracking details |
 | `send_message` | Send a message in an order conversation |
+| `get_item_visits` | Get visit/view statistics for your listings |
+| `manage_ads` | Manage Product Ads — check status, activate, or pause campaigns |
 
 ## Supported Countries
 
@@ -97,15 +102,47 @@ Once installed, you can ask your Construct agent things like:
 
 ## Development
 
-This app runs as a Deno subprocess with restricted permissions:
+This app runs as a Cloudflare Worker using the ConstructApp SDK pattern.
+
+### Auth pattern
+
+Auth state is **never stored in module-level variables**. Instead, the Construct platform injects OAuth credentials per-request via the `x-construct-auth` header, and the SDK extracts them into a `RequestContext` (`ctx`) object that is passed through the entire call chain:
+
+```typescript
+// apiFetch and authFetch accept ctx as a parameter
+async function apiFetch<T>(path: string, ctx: RequestContext): Promise<T> { ... }
+async function authFetch<T>(path: string, ctx: RequestContext, options?: RequestInit): Promise<T> { ... }
+
+// Tool handlers receive ctx from the SDK
+app.tool('my_tool', {
+  handler: async (args, ctx) => {
+    requireAuth(ctx);  // throws if not authenticated
+    const data = await authFetch('/endpoint', ctx);
+    return `Result: ${data}`;
+  },
+});
+```
+
+This ensures no state leaks between requests, even if the Cloudflare Worker runtime reuses an isolate.
+
+### Forking for other e-commerce APIs
+
+This app is a good starting point for integrating other marketplace APIs (Amazon, eBay, Shopee, etc.):
+
+1. Fork this repo
+2. Replace the `API_BASE` URL and TypeScript interfaces with the target API's endpoints and response shapes
+3. Update `apiFetch`/`authFetch` to match the target API's authentication scheme (Bearer token, API key, etc.)
+4. Rewrite each `app.tool()` registration to call the target API's endpoints — the text formatting patterns (building `lines[]` arrays) work well for any marketplace
+5. Update `manifest.json` with the new app's OAuth URLs and network permissions
+
+### Local development
 
 ```bash
-# Public tools only
-deno run --allow-net=api.mercadolibre.com server.ts
-
-# With OAuth tokens for seller tools
-MELI_ACCESS_TOKEN=xxx MELI_USER_ID=123 deno run --allow-net=api.mercadolibre.com --allow-env=MELI_ACCESS_TOKEN,MELI_REFRESH_TOKEN,MELI_USER_ID server.ts
+npm install
+npm exec wrangler dev
 ```
+
+The Worker listens on `http://localhost:8787/mcp` for JSON-RPC requests and `http://localhost:8787/health` for health checks.
 
 ## License
 
