@@ -269,7 +269,7 @@ function requireAuth(ctx: RequestContext): asserts ctx is RequestContext & { aut
 
 const API_BASE = 'https://api.mercadolibre.com';
 
-const app = new ConstructApp({ name: 'mercadolibre', version: '2.0.0' });
+const app = new ConstructApp({ name: 'mercadolibre', version: '0.1.0' });
 
 // ─── MercadoLibre Sites ──────────────────────────────────────────────────────
 
