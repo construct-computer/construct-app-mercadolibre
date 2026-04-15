@@ -7,10 +7,29 @@
   "categories": ["shopping"],
   "tags": ["e-commerce", "marketplace", "seller-tools", "latin-america"],
   "auth": {
-    "oauth2": {
-      "authorization_url": "https://auth.mercadolibre.com/authorization",
-      "token_url": "https://api.mercadolibre.com/oauth/token"
-    }
+    "schemes": [
+      {
+        "type": "oauth2",
+        "label": "Sign in with MercadoLibre",
+        "authorization_url": "https://auth.mercadolibre.com/authorization",
+        "token_url": "https://api.mercadolibre.com/oauth/token",
+        "scopes": ["offline_access", "read", "write"]
+      },
+      {
+        "type": "api_key",
+        "label": "Paste Access Token",
+        "instructions": "Generate a long-lived access token at https://developers.mercadolibre.com/devcenter and paste it below. Bearer-style tokens begin with APP_USR-.",
+        "fields": [
+          {
+            "name": "access_token",
+            "displayName": "Access Token",
+            "type": "password",
+            "required": true,
+            "placeholder": "APP_USR-..."
+          }
+        ]
+      }
+    ]
   },
   "permissions": {
     "network": ["api.mercadolibre.com", "auth.mercadolibre.com"]
